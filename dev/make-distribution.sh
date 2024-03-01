@@ -302,3 +302,5 @@ if [ "$MAKE_TGZ" == "true" ]; then
   $TAR -czf "spark-$VERSION-bin-$NAME.tgz" -C "$SPARK_HOME" "$TARDIR_NAME"
   rm -rf "$TARDIR"
 fi
+
+echo "Finished: SUCCESS"
