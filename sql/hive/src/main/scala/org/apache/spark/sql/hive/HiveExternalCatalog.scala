@@ -96,9 +96,6 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
    */
   private def withClient[T](body: => T): T = synchronized {
     try {
-      // scalastyle:off println
-      println("xbis: local sources")
-      // scalastyle:on println
       body
     } catch {
       case NonFatal(exception) if isClientException(exception) =>
@@ -224,6 +221,7 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
   }
 
   override def databaseExists(db: String): Boolean = withClient {
+    logWarning(s"xbis: local sources")
     client.databaseExists(db)
   }
 

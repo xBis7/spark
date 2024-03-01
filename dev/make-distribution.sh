@@ -289,6 +289,7 @@ if [ -d "$SPARK_HOME/R/lib/SparkR" ]; then
 fi
 
 cp -r "$SPARK_HOME/dev/compose" "$DISTDIR"
+mkdir "$DISTDIR/work"
 
 if [ "$MAKE_TGZ" == "true" ]; then
   TARDIR_NAME=spark-$VERSION-bin-$NAME
