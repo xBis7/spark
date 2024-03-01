@@ -96,6 +96,9 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
    */
   private def withClient[T](body: => T): T = synchronized {
     try {
+      // scalastyle:off println
+      println("xbis: local sources")
+      // scalastyle:on println
       body
     } catch {
       case NonFatal(exception) if isClientException(exception) =>

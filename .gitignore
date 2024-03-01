@@ -120,3 +120,5 @@ node_modules
 sql/api/gen/
 sql/api/src/main/antlr4/org/apache/spark/sql/catalyst/parser/SqlBaseLexer.tokens
 sql/api/src/main/antlr4/org/apache/spark/sql/catalyst/parser/gen/
+
+dev/compose/spark/conf/hive-jars/*
