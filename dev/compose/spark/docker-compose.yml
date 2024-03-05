@@ -8,7 +8,7 @@ services:
     ports:
       - "9090:9090"  # Spark master UI
       - "7077:7077"  # Spark master communication port
-      - "6006:6006"  # Debugger
+      - "6006:6006"  # spark-shell debugger
     environment:
       - SPARK_LOCAL_IP=spark-master
     volumes:
