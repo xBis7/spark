@@ -23,7 +23,7 @@ import java.time.Duration
 import scala.collection.JavaConverters._
 
 import org.apache.hadoop.{io => hadoopIo}
-import org.apache.hadoop.hive.common.`type`.{HiveChar, HiveDecimal, HiveIntervalDayTime, HiveIntervalYearMonth, HiveVarchar}
+import org.apache.hadoop.hive.common.`type`.{Date, HiveChar, HiveDecimal, HiveIntervalDayTime, HiveIntervalYearMonth, HiveVarchar}
 import org.apache.hadoop.hive.serde2.{io => hiveIo}
 import org.apache.hadoop.hive.serde2.objectinspector.{StructField => HiveStructField, _}
 import org.apache.hadoop.hive.serde2.objectinspector.primitive._
@@ -478,7 +478,7 @@ private[hive] trait HiveInspectors {
         _ => constant
       case poi: WritableConstantTimestampObjectInspector =>
         val t = poi.getWritableConstantValue
-        val constant = DateTimeUtils.fromJavaTimestamp(t.getTimestamp)
+        val constant = DateTimeUtils.fromJavaTimestamp(t.getTimestamp.toSqlTimestamp)
         _ => constant
       case poi: WritableConstantIntObjectInspector =>
         val constant = poi.getWritableConstantValue.get()
@@ -507,7 +507,8 @@ private[hive] trait HiveInspectors {
         System.arraycopy(writable.getBytes, 0, constant, 0, constant.length)
         _ => constant
       case poi: WritableConstantDateObjectInspector =>
-        val constant = DateTimeUtils.fromJavaDate(poi.getWritableConstantValue.get())
+        val constant = DateTimeUtils.fromJavaDate(
+          hiveDateToSqlDate(poi.getWritableConstantValue.get()))
         _ => constant
       case mi: StandardConstantMapObjectInspector =>
         val keyUnwrapper = unwrapperFor(mi.getMapKeyObjectInspector)
@@ -639,7 +640,8 @@ private[hive] trait HiveInspectors {
         case x: DateObjectInspector =>
           data: Any => {
             if (data != null) {
-              DateTimeUtils.fromJavaDate(x.getPrimitiveJavaObject(data))
+              val sqlDate : java.sql.Date = hiveDateToSqlDate(x.getPrimitiveJavaObject(data))
+              DateTimeUtils.fromJavaDate(sqlDate)
             } else {
               null
             }
@@ -647,7 +649,8 @@ private[hive] trait HiveInspectors {
         case x: TimestampObjectInspector if x.preferWritable() =>
           data: Any => {
             if (data != null) {
-              DateTimeUtils.fromJavaTimestamp(x.getPrimitiveWritableObject(data).getTimestamp)
+              DateTimeUtils.fromJavaTimestamp(
+                x.getPrimitiveWritableObject(data).getTimestamp.toSqlTimestamp)
             } else {
               null
             }
@@ -655,7 +658,7 @@ private[hive] trait HiveInspectors {
         case ti: TimestampObjectInspector =>
           data: Any => {
             if (data != null) {
-              DateTimeUtils.fromJavaTimestamp(ti.getPrimitiveJavaObject(data))
+              DateTimeUtils.fromJavaTimestamp(ti.getPrimitiveJavaObject(data).toSqlTimestamp)
             } else {
               null
             }
@@ -809,6 +812,14 @@ private[hive] trait HiveInspectors {
     }
     cache
   }
+
+  def hiveDateToSqlDate(data: Any): java.sql.Date = data match {
+    case hiveDate: Date =>
+      new java.sql.Date(hiveDate.toEpochMilli)
+    case _ =>
+      throw new IllegalArgumentException("Unsupported type or format for date conversion")
+  }
+
 
   /**
    * @param dataType Catalyst data type
