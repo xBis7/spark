@@ -93,7 +93,7 @@
     <dependency>
       <groupId>${hive.group}</groupId>
       <artifactId>hive-exec</artifactId>
-      <classifier>${hive.classifier}</classifier>
+      <version>3.1.5</version>
     </dependency>
     <dependency>
       <groupId>${hive.group}</groupId>
