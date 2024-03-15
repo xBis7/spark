@@ -197,7 +197,7 @@
     <dependency>
       <groupId>${hive.group}</groupId>
       <artifactId>hive-exec</artifactId>
-      <classifier>${hive.classifier}</classifier>
+      <classifier>4.0.0-beta-1</classifier>
       <scope>provided</scope>
     </dependency>
     <dependency>
