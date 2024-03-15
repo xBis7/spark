@@ -28,11 +28,12 @@ import scala.util.control.NonFatal
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, PartitionDropOptions, TableType}
-import org.apache.hadoop.hive.metastore.api.{Database, EnvironmentContext, Function => HiveFunction, FunctionType, Index, MetaException, PrincipalType, ResourceType, ResourceUri}
+import org.apache.hadoop.hive.metastore.api.{Database, EnvironmentContext, Function => HiveFunction, FunctionType, MetaException, PrincipalType, ResourceType, ResourceUri}
 import org.apache.hadoop.hive.ql.Driver
+// import org.apache.hadoop.hive.ql.ddl.table.partition.add.AlterTableAddPartitionDesc
 import org.apache.hadoop.hive.ql.io.AcidUtils
 import org.apache.hadoop.hive.ql.metadata.{Hive, HiveException, Partition, Table}
-import org.apache.hadoop.hive.ql.plan.AddPartitionDesc
+import org.apache.hadoop.hive.ql.optimizer.lineage.LineageCtx.Index
 import org.apache.hadoop.hive.ql.processors.{CommandProcessor, CommandProcessorFactory}
 import org.apache.hadoop.hive.ql.session.SessionState
 import org.apache.hadoop.hive.serde.serdeConstants
@@ -41,7 +42,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.metrics.source.HiveCatalogMetrics
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, InternalRow}
 import org.apache.spark.sql.catalyst.analysis.NoSuchPermanentFunctionException
-import org.apache.spark.sql.catalyst.catalog.{CatalogFunction, CatalogTable, CatalogTablePartition, CatalogUtils, ExternalCatalogUtils, FunctionResource, FunctionResourceType}
+import org.apache.spark.sql.catalyst.catalog.{CatalogFunction, CatalogTable, CatalogTablePartition, ExternalCatalogUtils, FunctionResource, FunctionResourceType}
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.util.{CharVarcharUtils, DateFormatter, TypeUtils}
@@ -321,16 +322,40 @@ private[client] class Shim_v2_0 extends Shim with Logging {
       tableName: String,
       parts: Seq[CatalogTablePartition],
       ignoreIfExists: Boolean): Unit = {
-    val addPartitionDesc = new AddPartitionDesc(dbName, tableName, ignoreIfExists)
-    parts.zipWithIndex.foreach { case (s, i) =>
-      addPartitionDesc.addPartition(
-        s.spec.asJava, s.storage.locationUri.map(CatalogUtils.URIToString).orNull)
-      if (s.parameters.nonEmpty) {
-        addPartitionDesc.getPartition(i).setPartParams(s.parameters.asJava)
-      }
-    }
+    // Convert parts to java.util.List and then
+    // pass it as a parameter to AlterTableAddPartitionDesc.
+//        val partitionDescList: java.util.List[AlterTableAddPartitionDesc.PartitionDesc] =
+//          new JArrayList[AlterTableAddPartitionDesc.PartitionDesc]()
+//        parts.foreach { part =>
+//          val partDesc: AlterTableAddPartitionDesc.PartitionDesc =
+//            new AlterTableAddPartitionDesc.PartitionDesc(
+//              part.spec.asJava,
+//              part.storage.locationUri.map(CatalogUtils.URIToString(_)).orNull,
+//              part.parameters.asJava)
+//          partitionDescList.add(partDesc)
+//        }
+//
+//        val addPartitionDesc = new AlterTableAddPartitionDesc(
+//          dbName, tableName, ignoreIfExists, partitionDescList)
+
+    // We don't need the above part of the code.
+    // After testing and verifying, we can remove it.
+
     recordHiveCall()
-    hive.createPartitions(addPartitionDesc)
+
+    // We need a java.util.List of
+    //    org.apache.hadoop.hive.metastore.api.Partition
+    // We can get a java.util.List of
+    //    org.apache.hadoop.hive.ql.metadata.Partition
+    // and convert it.
+    val partitionList: java.util.List[org.apache.hadoop.hive.metastore.api.Partition] =
+      new JArrayList[org.apache.hadoop.hive.metastore.api.Partition]()
+
+    val table: Table = getTable(hive, dbName, tableName, throwException = false)
+    hive.getAllPartitions(table).forEach(p => {
+      partitionList.add(p.getTPartition)
+    })
+    hive.addPartitions(partitionList, ignoreIfExists, false)
   }
 
   override def getAllPartitions(hive: Hive, table: Table): Seq[Partition] = {
@@ -511,7 +536,8 @@ private[client] class Shim_v2_0 extends Shim with Logging {
 
   override def dropIndex(hive: Hive, dbName: String, tableName: String, indexName: String): Unit = {
     recordHiveCall()
-    hive.dropIndex(dbName, tableName, indexName, throwExceptionInDropIndex, deleteDataInDropIndex)
+    // Index support has been removed entirely from HMS.
+//    hive.dropIndex(dbName, tableName, indexName, throwExceptionInDropIndex, deleteDataInDropIndex)
   }
 
   override def dropTable(
@@ -988,7 +1014,9 @@ private[client] class Shim_v2_0 extends Shim with Logging {
       oldPartSpec: JMap[String, String],
       newPart: Partition): Unit = {
     recordHiveCall()
-    hive.renamePartition(table, oldPartSpec, newPart)
+    // It needs a replWriteId as well. But this is for an older client.
+    // Passing 0 for now.
+    hive.renamePartition(table, oldPartSpec, newPart, 0)
   }
 
   override def getIndexes(
@@ -997,7 +1025,16 @@ private[client] class Shim_v2_0 extends Shim with Logging {
       tableName: String,
       max: Short): Seq[Index] = {
     recordHiveCall()
-    hive.getIndexes(dbName, tableName, max).asScala.toSeq
+    // Index support has been removed entirely from HMS.
+    // Hive now comes from 4.0.0 and there are no index ops there.
+    // Due to backwards compatibility, we can't remove the method entirely,
+    // but we can comment this part, so that it doesn't do anything.
+
+    // To remove this method, we also need to remove
+    // private[client] class Shim_v0_13 extends Shim_v0_12 {
+
+    //    hive.getIndexes(dbName, tableName, max).asScala.toSeq
+    null
   }
 }
 
