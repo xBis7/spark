@@ -17,11 +17,14 @@
 
 package org.apache.spark.sql.hive.execution
 
+import java.util.Properties
+
 import scala.collection.JavaConverters._
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hive.ql.exec.Utilities
 import org.apache.hadoop.hive.ql.io.{DelegateSymlinkTextInputFormat, SymlinkTextInputFormat}
-import org.apache.hadoop.hive.ql.metadata.{Partition => HivePartition}
+import org.apache.hadoop.hive.ql.metadata.{Partition, Partition => HivePartition}
 import org.apache.hadoop.hive.ql.plan.TableDesc
 import org.apache.hadoop.hive.serde.serdeConstants
 import org.apache.hadoop.hive.serde2.objectinspector._
@@ -123,8 +126,15 @@ case class HiveTableScanExec(
 
     HiveShim.appendReadColumns(hiveConf, neededColumnIDs, neededColumnNames)
 
-    val deserializer = tableDesc.getDeserializerClass.getConstructor().newInstance()
-    deserializer.initialize(hiveConf, tableDesc.getProperties)
+    val deserializer = tableDesc.getSerDeClass.getConstructor().newInstance()
+
+    var partProps: Properties = null
+    if (relation.isPartitioned) {
+      val partition: Partition = new Partition(hiveQlTable)
+      val partDesc = Utilities.getPartitionDescFromTableDesc(tableDesc, partition, true)
+      partProps = partDesc.getProperties
+    }
+    deserializer.initialize(hiveConf, tableDesc.getProperties, partProps)
 
     // Specifies types and object inspectors of columns to be scanned.
     val structOI = ObjectInspectorUtils
