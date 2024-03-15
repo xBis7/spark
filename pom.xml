@@ -130,7 +130,6 @@
     <zookeeper.version>3.9.1</zookeeper.version>
     <curator.version>5.6.0</curator.version>
     <hive.group>org.apache.hive</hive.group>
-    <hive.classifier>core</hive.classifier>
     <!-- Version used in Maven Hive dependency -->
     <hive.version>4.0.0-beta-1</hive.version>
     <hive23.version>4.0.0-beta-1</hive23.version>
@@ -2080,7 +2079,6 @@
       <dependency>
         <groupId>${hive.group}</groupId>
         <artifactId>hive-exec</artifactId>
-        <classifier>${hive.classifier}</classifier>
         <version>${hive.version}</version>
         <scope>${hive.deps.scope}</scope>
         <exclusions>

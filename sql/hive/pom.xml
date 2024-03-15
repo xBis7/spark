@@ -91,7 +91,6 @@
     <dependency>
       <groupId>${hive.group}</groupId>
       <artifactId>hive-exec</artifactId>
-      <classifier>4.0.0-beta-1</classifier>
     </dependency>
     <dependency>
       <groupId>${hive.group}</groupId>
