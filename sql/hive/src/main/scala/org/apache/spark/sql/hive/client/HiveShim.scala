@@ -30,11 +30,12 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.TableType
-import org.apache.hadoop.hive.metastore.api.{Database, EnvironmentContext, Function => HiveFunction, FunctionType, Index, MetaException, PrincipalType, ResourceType, ResourceUri}
+import org.apache.hadoop.hive.metastore.api.{Database, EnvironmentContext, Function => HiveFunction, FunctionType, MetaException, PrincipalType, ResourceType, ResourceUri}
 import org.apache.hadoop.hive.ql.Driver
+// import org.apache.hadoop.hive.ql.ddl.table.partition.add.AlterTableAddPartitionDesc
 import org.apache.hadoop.hive.ql.io.AcidUtils
 import org.apache.hadoop.hive.ql.metadata.{Hive, HiveException, Partition, Table}
-import org.apache.hadoop.hive.ql.plan.AddPartitionDesc
+import org.apache.hadoop.hive.ql.optimizer.lineage.LineageCtx.Index
 import org.apache.hadoop.hive.ql.processors.{CommandProcessor, CommandProcessorFactory}
 import org.apache.hadoop.hive.ql.session.SessionState
 import org.apache.hadoop.hive.serde.serdeConstants
@@ -695,6 +696,8 @@ private[client] class Shim_v0_12 extends Shim with Logging {
       max: Short): Seq[Index] = {
     recordHiveCall()
     hive.getIndexes(dbName, tableName, max).asScala.toSeq
+    // Index support has been removed entirely from HMS.
+    // We need to remove this and change the clients, so that they don't need the override.
   }
 }
 
@@ -756,16 +759,40 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
       table: String,
       parts: Seq[CatalogTablePartition],
       ignoreIfExists: Boolean): Unit = {
-    val addPartitionDesc = new AddPartitionDesc(db, table, ignoreIfExists)
-    parts.zipWithIndex.foreach { case (s, i) =>
-      addPartitionDesc.addPartition(
-        s.spec.asJava, s.storage.locationUri.map(CatalogUtils.URIToString(_)).orNull)
-      if (s.parameters.nonEmpty) {
-        addPartitionDesc.getPartition(i).setPartParams(s.parameters.asJava)
-      }
-    }
+    // Convert parts to java.util.List and then
+    // pass it as a parameter to AlterTableAddPartitionDesc.
+//    val partitionDescList: java.util.List[AlterTableAddPartitionDesc.PartitionDesc] =
+//      new JArrayList[AlterTableAddPartitionDesc.PartitionDesc]()
+//    parts.foreach { part =>
+//      val partDesc: AlterTableAddPartitionDesc.PartitionDesc =
+//        new AlterTableAddPartitionDesc.PartitionDesc(
+//          part.spec.asJava,
+//          part.storage.locationUri.map(CatalogUtils.URIToString(_)).orNull,
+//          part.parameters.asJava)
+//      partitionDescList.add(partDesc)
+//    }
+//
+//    val addPartitionDesc = new AlterTableAddPartitionDesc(
+//      db, table, ignoreIfExists, partitionDescList)
+
+    // We don't need the above part of the code.
+    // After testing and verifying, we can remove it.
+
     recordHiveCall()
-    hive.createPartitions(addPartitionDesc)
+
+    // We need a java.util.List of
+    //    org.apache.hadoop.hive.metastore.api.Partition
+    // We can get a java.util.List of
+    //    org.apache.hadoop.hive.ql.metadata.Partition
+    // and convert it.
+    val partitionList: java.util.List[org.apache.hadoop.hive.metastore.api.Partition] =
+      new JArrayList[org.apache.hadoop.hive.metastore.api.Partition]()
+
+    val tb: Table = getTable(hive, db, table, throwException = false)
+    hive.getAllPartitions(tb).forEach(p => {
+      partitionList.add(p.getTPartition)
+    })
+    hive.addPartitions(partitionList, ignoreIfExists, false)
   }
 
   override def getAllPartitions(hive: Hive, table: Table): Seq[Partition] = {
