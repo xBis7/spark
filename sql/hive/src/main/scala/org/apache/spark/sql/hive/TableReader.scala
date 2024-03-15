@@ -27,7 +27,7 @@ import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants._
 import org.apache.hadoop.hive.ql.exec.Utilities
 import org.apache.hadoop.hive.ql.metadata.{Partition => HivePartition, Table => HiveTable}
 import org.apache.hadoop.hive.ql.plan.{PartitionDesc, TableDesc}
-import org.apache.hadoop.hive.serde2.Deserializer
+import org.apache.hadoop.hive.serde2.AbstractSerDe
 import org.apache.hadoop.hive.serde2.avro.AvroSerdeUtils.AvroTableProperties
 import org.apache.hadoop.hive.serde2.objectinspector.{ObjectInspectorConverters, StructObjectInspector}
 import org.apache.hadoop.hive.serde2.objectinspector.primitive._
@@ -94,7 +94,7 @@ class HadoopTableReader(
   override def makeRDDForTable(hiveTable: HiveTable): RDD[InternalRow] =
     makeRDDForTable(
       hiveTable,
-      Utils.classForName[Deserializer](tableDesc.getSerdeClassName),
+      Utils.classForName[AbstractSerDe](tableDesc.getSerdeClassName),
       filterOpt = None)
 
   /**
@@ -108,7 +108,7 @@ class HadoopTableReader(
    */
   def makeRDDForTable(
       hiveTable: HiveTable,
-      deserializerClass: Class[_ <: Deserializer],
+      deserializerClass: Class[_ <: AbstractSerDe],
       filterOpt: Option[PathFilter]): RDD[InternalRow] = {
 
     assert(!hiveTable.isPartitioned,
@@ -133,7 +133,9 @@ class HadoopTableReader(
       val hconf = broadcastedHadoopConf.value.value
       val deserializer = deserializerClass.getConstructor().newInstance()
       DeserializerLock.synchronized {
-        deserializer.initialize(hconf, localTableDesc.getProperties)
+        // This method is called on non partitioned tables.
+        // Pass null in the partition properties parameter.
+        deserializer.initialize(hconf, localTableDesc.getProperties, null)
       }
       HadoopTableReader.fillObject(iter, deserializer, attrsWithIndex, mutableRow, deserializer)
     }
@@ -143,7 +145,7 @@ class HadoopTableReader(
 
   override def makeRDDForPartitionedTable(partitions: Seq[HivePartition]): RDD[InternalRow] = {
     val partitionToDeserializer = partitions.map(part =>
-      (part, part.getDeserializer.getClass.asInstanceOf[Class[Deserializer]])).toMap
+      (part, part.getDeserializer.getClass.asInstanceOf[Class[AbstractSerDe]])).toMap
     makeRDDForPartitionedTable(partitionToDeserializer, filterOpt = None)
   }
 
@@ -158,13 +160,13 @@ class HadoopTableReader(
    *     subdirectory of each partition being read. If None, then all files are accepted.
    */
   def makeRDDForPartitionedTable(
-      partitionToDeserializer: Map[HivePartition, Class[_ <: Deserializer]],
+      partitionToDeserializer: Map[HivePartition, Class[_ <: AbstractSerDe]],
       filterOpt: Option[PathFilter]): RDD[InternalRow] = {
 
     // SPARK-5068:get FileStatus and do the filtering locally when the path is not exists
     def verifyPartitionPath(
-        partitionToDeserializer: Map[HivePartition, Class[_ <: Deserializer]]):
-        Map[HivePartition, Class[_ <: Deserializer]] = {
+        partitionToDeserializer: Map[HivePartition, Class[_ <: AbstractSerDe]]):
+        Map[HivePartition, Class[_ <: AbstractSerDe]] = {
       if (!conf.verifyPartitionPath) {
         partitionToDeserializer
       } else {
@@ -187,7 +189,7 @@ class HadoopTableReader(
             }
 
             val partPath = partition.getDataLocation
-            val partNum = Utilities.getPartitionDesc(partition).getPartSpec.size()
+            val partNum = Utilities.getPartitionDesc(partition, tableDesc).getPartSpec.size()
             val pathPatternStr = getPathPatternByPath(partNum, partPath)
             if (!pathPatternSet.contains(pathPatternStr)) {
               pathPatternSet += pathPatternStr
@@ -263,12 +265,20 @@ class HadoopTableReader(
           case (key, value) => props.setProperty(key, value)
         }
         DeserializerLock.synchronized {
-          deserializer.initialize(hconf, props)
+          // In Hive4, initialize() has been moved to AbstractSerDe and accepts
+          // both table and partition properties as parameters.
+          // But here, it used to merge table and partition props and pass the merge.
+          // Now, we pass the merge and the partition props.
+          // We might need to reconsider passing the merge, and replace it with just the tableProps.
+          // This won't be clear, until we run some tests.
+          deserializer.initialize(hconf, props, partProps)
         }
         // get the table deserializer
-        val tableSerDe = localTableDesc.getDeserializerClass.getConstructor().newInstance()
+        val tableSerDe = localTableDesc.getSerDeClass.getConstructor().newInstance()
         DeserializerLock.synchronized {
-          tableSerDe.initialize(hconf, tableProperties)
+          tableSerDe.initialize(hconf, tableProperties, partProps)
+          // It needs a 3rd parameter of type properties, partition properties
+          // AbstractSerDe has become superclass of Deserializer and Serializer
         }
 
         // fill the non partition key attributes
@@ -472,10 +482,10 @@ private[hive] object HadoopTableReader extends HiveInspectors with Logging {
    */
   def fillObject(
       iterator: Iterator[Writable],
-      rawDeser: Deserializer,
+      rawDeser: AbstractSerDe,
       nonPartitionKeyAttrs: Seq[(Attribute, Int)],
       mutableRow: InternalRow,
-      tableDeser: Deserializer): Iterator[InternalRow] = {
+      tableDeser: AbstractSerDe): Iterator[InternalRow] = {
 
     val soi = if (rawDeser.getObjectInspector.equals(tableDeser.getObjectInspector)) {
       rawDeser.getObjectInspector.asInstanceOf[StructObjectInspector]
