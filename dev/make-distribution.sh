@@ -288,6 +288,9 @@ if [ -d "$SPARK_HOME/R/lib/SparkR" ]; then
   cp "$SPARK_HOME/R/lib/sparkr.zip" "$DISTDIR/R/lib"
 fi
 
+cp -r "$SPARK_HOME/dev/compose" "$DISTDIR"
+mkdir "$DISTDIR/work"
+
 if [ "$MAKE_TGZ" == "true" ]; then
   TARDIR_NAME=spark-$VERSION-bin-$NAME
   TARDIR="$SPARK_HOME/$TARDIR_NAME"
@@ -300,3 +303,5 @@ if [ "$MAKE_TGZ" == "true" ]; then
   $TAR -czf "spark-$VERSION-bin-$NAME.tgz" -C "$SPARK_HOME" "$TARDIR_NAME"
   rm -rf "$TARDIR"
 fi
+
+echo "Finished: SUCCESS"

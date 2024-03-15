@@ -35,6 +35,8 @@ else
   fi
 fi
 
+#export SPARK_SUBMIT_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=6006"
+
 # Find Spark jars.
 if [ -d "${SPARK_HOME}/jars" ]; then
   SPARK_JARS_DIR="${SPARK_HOME}/jars"
@@ -109,4 +111,14 @@ if [ $LAUNCHER_EXIT_CODE != 0 ]; then
 fi
 
 CMD=("${CMD[@]:0:$LAST}")
+
+# First arg is the java binary -> /opt/java/openjdk/bin/java
+# Second arg is the java classpath parameter -> -cp
+# Add the debug args between them
+
+if echo "${CMD[$LAST-1]}" | grep 'spark-shell'; then
+  debug_args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:6006"
+  CMD=( "${CMD[@]:0:1}" "$debug_args" "${CMD[@]:1}" )
+fi
+
 exec "${CMD[@]}"
