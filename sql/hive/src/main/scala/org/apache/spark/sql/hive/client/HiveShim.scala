@@ -686,7 +686,9 @@ private[client] class Shim_v0_12 extends Shim with Logging {
       oldPartSpec: JMap[String, String],
       newPart: Partition): Unit = {
     recordHiveCall()
-    hive.renamePartition(table, oldPartSpec, newPart)
+    // It needs a replWriteId as well. But this is for an older client.
+    // Passing 0 for now.
+    hive.renamePartition(table, oldPartSpec, newPart, 0)
   }
 
   override def getIndexes(
@@ -695,9 +697,16 @@ private[client] class Shim_v0_12 extends Shim with Logging {
       tableName: String,
       max: Short): Seq[Index] = {
     recordHiveCall()
-    hive.getIndexes(dbName, tableName, max).asScala.toSeq
     // Index support has been removed entirely from HMS.
-    // We need to remove this and change the clients, so that they don't need the override.
+    // Hive now comes from 4.0.0 and there are no index ops there.
+    // Due to backwards compatibility, we can't remove the method entirely,
+    // but we can comment this part, so that it doesn't do anything.
+
+    // To remove this method, we also need to remove
+    // private[client] class Shim_v0_13 extends Shim_v0_12 {
+
+//    hive.getIndexes(dbName, tableName, max).asScala.toSeq
+    null
   }
 }
 
