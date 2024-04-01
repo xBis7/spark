@@ -882,11 +882,13 @@ private[hive] class HiveClientImpl(
       val proc = shim.getCommandProcessor(tokens(0), conf)
       proc match {
         case driver: Driver =>
-          val response: CommandProcessorResponse = driver.run(cmd)
           // Throw an exception if there is an error in query processing.
-          if (response.getResponseCode != 0) {
-            closeDriver(driver)
-            throw new QueryExecutionException(response.getErrorMessage)
+          try {
+            driver.run(cmd)
+          } catch {
+            case e: CommandProcessorException =>
+              closeDriver(driver)
+              throw new QueryExecutionException(e.getMessage)
           }
           driver.setMaxRows(maxRows)
 
@@ -900,12 +902,15 @@ private[hive] class HiveClientImpl(
             state.out.println(tokens(0) + " " + cmd_1)
             // scalastyle:on println
           }
-          val response: CommandProcessorResponse = proc.run(cmd_1)
           // Throw an exception if there is an error in query processing.
-          if (response.getResponseCode != 0) {
-            throw new QueryExecutionException(response.getErrorMessage)
+          try {
+            proc.run(cmd_1)
+          } catch {
+            case e: CommandProcessorException =>
+              Seq(e.getResponseCode.toString) // This might be redundant, since we are throwing an e
+              throw new QueryExecutionException(e.getMessage)
           }
-          Seq(response.getResponseCode.toString)
+          Seq(Integer.toString(0))
       }
     } catch {
       case e: Exception =>
