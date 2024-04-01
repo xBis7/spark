@@ -472,7 +472,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
     console.printInfo(s"Spark master: $master, Application Id: $appId")
   }
 
-  override def processCmd(cmd: String): Int = {
+  override def processCmd(cmd: String): CommandProcessorResponse = {
     val cmd_trimmed: String = cmd.trim()
     val cmd_lower = cmd_trimmed.toLowerCase(Locale.ROOT)
     val tokens: Array[String] = cmd_trimmed.split("\\s+")
@@ -489,9 +489,9 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
       val endTimeNs = System.nanoTime()
       val timeTaken: Double = TimeUnit.NANOSECONDS.toMillis(endTimeNs - startTimeNs) / 1000.0
       console.printInfo(s"Time taken: $timeTaken seconds")
-      0
+      new CommandProcessorResponse()
     } else {
-      var ret = 0
+      var ret = null
       val hconf = conf.asInstanceOf[HiveConf]
       val proc: CommandProcessor = CommandProcessorFactory.get(tokens, hconf)
 
@@ -503,7 +503,6 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
           proc.isInstanceOf[ResetProcessor] ) {
           val driver = new SparkSQLDriver
 
-          driver.init()
           val out = sessionState.out
           val err = sessionState.err
           val startTimeNs: Long = System.nanoTime()
@@ -511,7 +510,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
             out.println(cmd)
           }
           try {
-            driver.run(cmd)
+            ret = driver.run(cmd)
           } catch {
             case e: CommandProcessorException =>
               val format = SparkSQLEnv.sqlContext.conf.errorMessageFormat
@@ -530,6 +529,10 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
           val endTimeNs = System.nanoTime()
           val timeTaken: Double = TimeUnit.NANOSECONDS.toMillis(endTimeNs - startTimeNs) / 1000.0
           driver.close()
+
+          if (ret != null) { // TODO: check Schema.
+            return ret
+          }
 
           val res = new JArrayList[String]()
 
@@ -575,13 +578,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
           if (sessionState.getIsVerbose) {
             sessionState.out.println(tokens(0) + " " + cmd_1)
           }
-          try {
-            proc.run(cmd_1)
-            ret = 0
-          } catch {
-            case e: CommandProcessorException =>
-              ret = e.getResponseCode
-          }
+          ret = proc.run(cmd_1)
         }
         // scalastyle:on println
       }

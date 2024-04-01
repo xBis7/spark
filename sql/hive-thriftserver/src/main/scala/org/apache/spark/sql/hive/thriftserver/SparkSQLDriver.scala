@@ -21,7 +21,8 @@ import java.util.{ArrayList => JArrayList, Arrays, List => JList}
 
 import scala.collection.JavaConverters._
 
-import org.apache.commons.lang3.exception.ExceptionUtils
+// import org.apache.commons.lang3.exception.ExceptionUtils
+import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.api.{FieldSchema, Schema}
 import org.apache.hadoop.hive.ql.Driver
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse
@@ -36,14 +37,11 @@ import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
 
 
 private[hive] class SparkSQLDriver(val context: SQLContext = SparkSQLEnv.sqlContext)
-  extends Driver
+  extends Driver(new HiveConf()) // Default constructor has been removed from the Driver class.
   with Logging {
 
   private[hive] var tableSchema: Schema = _
   private[hive] var hiveResponse: Seq[String] = _
-
-  override def init(): Unit = {
-  }
 
   private def getResultSetSchema(query: QueryExecution): Schema = {
     val analyzed = query.analyzed
@@ -77,14 +75,19 @@ private[hive] class SparkSQLDriver(val context: SQLContext = SparkSQLEnv.sqlCont
           }
       }
       tableSchema = getResultSetSchema(execution)
-      new CommandProcessorResponse(0)
+      // All CommandProcessorResponse occurrences are now throwing a CommandProcessorException
+      // but run() has been left returning a CommandProcessorResponse.
+      // If that wasn't the case, we would be throwing a CommandProcessorException.
+      new CommandProcessorResponse()
     } catch {
         case st: SparkThrowable =>
           logDebug(s"Failed in [$command]", st)
-          new CommandProcessorResponse(1, ExceptionUtils.getStackTrace(st), st.getSqlState, st)
+          new CommandProcessorResponse(new Schema(), st.getMessage)
+//          new CommandProcessorResponse(1, ExceptionUtils.getStackTrace(st), st.getSqlState, st)
         case cause: Throwable =>
           logError(s"Failed in [$command]", cause)
-          new CommandProcessorResponse(1, ExceptionUtils.getStackTrace(cause), null, cause)
+          new CommandProcessorResponse(new Schema(), cause.getMessage)
+//          new CommandProcessorResponse(1, ExceptionUtils.getStackTrace(cause), null, cause)
     }
   }
 
