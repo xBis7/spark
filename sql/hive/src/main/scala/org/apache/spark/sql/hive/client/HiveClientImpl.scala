@@ -37,9 +37,9 @@ import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType => HiveTabl
 import org.apache.hadoop.hive.metastore.api.{Database => HiveDatabase, Table => MetaStoreApiTable, _}
 import org.apache.hadoop.hive.ql.Driver
 import org.apache.hadoop.hive.ql.metadata.{Hive, HiveException, Partition => HivePartition, Table => HiveTable}
-import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.HIVE_COLUMN_ORDER_ASC
 import org.apache.hadoop.hive.ql.processors._
 import org.apache.hadoop.hive.ql.session.SessionState
+import org.apache.hadoop.hive.ql.util.DirectionUtils
 import org.apache.hadoop.hive.serde.serdeConstants
 import org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe
 import org.apache.hadoop.hive.serde2.`lazy`.LazySimpleSerDe
@@ -468,7 +468,7 @@ private[hive] class HiveClientImpl(
       // are sorted in ascending order, only then propagate the sortedness information
       // to downstream processing / optimizations in Spark
       // TODO: In future we can have Spark support columns sorted in descending order
-      val allAscendingSorted = sortColumnOrders.forall(_.getOrder == HIVE_COLUMN_ORDER_ASC)
+      val allAscendingSorted = sortColumnOrders.forall(_.getOrder == DirectionUtils.ASCENDING_CODE)
 
       val sortColumnNames = if (allAscendingSorted) {
         sortColumnOrders.map(_.getCol)
@@ -1147,7 +1147,7 @@ private[hive] object HiveClientImpl extends Logging {
         if (bucketSpec.sortColumnNames.nonEmpty) {
           hiveTable.setSortCols(
             bucketSpec.sortColumnNames
-              .map(col => new Order(col, HIVE_COLUMN_ORDER_ASC))
+              .map(col => new Order(col, DirectionUtils.ASCENDING_CODE))
               .toList
               .asJava
           )
