@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.hive.client
 
-import java.io.PrintStream
 import java.lang.{Iterable => JIterable}
 import java.lang.reflect.InvocationTargetException
 import java.nio.charset.StandardCharsets.UTF_8
@@ -866,7 +865,10 @@ private[hive] class HiveClientImpl(
       // and the CommandProcessorFactory.clean function removed.
       driver.getClass.getMethod("close").invoke(driver)
       if (version != hive.v3_0 && version != hive.v3_1) {
-        CommandProcessorFactory.clean(conf)
+        // As the comment above mentions, clean has been removed in Hive 3 and above.
+        // In the base jar, which was Hive 2.X, `clean` exists but now we use a base jar from Hive4.
+        // The optimal solution is to stop supporting any Hive version, older than Hive3.
+//        CommandProcessorFactory.clean(conf)
       }
     }
 
