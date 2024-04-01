@@ -31,6 +31,7 @@ import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hive.cli.{CliDriver, CliSessionState, OptionsProcessor}
 import org.apache.hadoop.hive.common.HiveInterruptUtils
+import org.apache.hadoop.hive.common.io.SessionStream
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.ql.Driver
 import org.apache.hadoop.hive.ql.processors._
@@ -43,7 +44,6 @@ import sun.misc.{Signal, SignalHandler}
 import org.apache.spark.{ErrorMessageFormat, SparkConf, SparkThrowable, SparkThrowableHelper}
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry
 import org.apache.spark.sql.catalyst.util.SQLKeywordUtils
 import org.apache.spark.sql.errors.QueryExecutionErrors
@@ -110,9 +110,9 @@ private[hive] object SparkSQLCLIDriver extends Logging {
 
     sessionState.in = System.in
     try {
-      sessionState.out = new PrintStream(System.out, true, UTF_8.name())
-      sessionState.info = new PrintStream(System.err, true, UTF_8.name())
-      sessionState.err = new PrintStream(System.err, true, UTF_8.name())
+      sessionState.out = new SessionStream(System.out, true, UTF_8.name())
+      sessionState.info = new SessionStream(System.err, true, UTF_8.name())
+      sessionState.err = new SessionStream(System.err, true, UTF_8.name())
     } catch {
       case e: UnsupportedEncodingException =>
         closeHiveSessionStateIfStarted(sessionState)
@@ -197,9 +197,9 @@ private[hive] object SparkSQLCLIDriver extends Logging {
     // will set the output into an invalid buffer.
     sessionState.in = System.in
     try {
-      sessionState.out = new PrintStream(System.out, true, UTF_8.name())
-      sessionState.info = new PrintStream(System.err, true, UTF_8.name())
-      sessionState.err = new PrintStream(System.err, true, UTF_8.name())
+      sessionState.out = new SessionStream(System.out, true, UTF_8.name())
+      sessionState.info = new SessionStream(System.err, true, UTF_8.name())
+      sessionState.err = new SessionStream(System.err, true, UTF_8.name())
     } catch {
       case e: UnsupportedEncodingException => exit(ERROR_PATH_NOT_FOUND)
     }
@@ -221,12 +221,24 @@ private[hive] object SparkSQLCLIDriver extends Logging {
     cli.printMasterAndAppId
 
     if (sessionState.execString != null) {
-      exit(cli.processLine(sessionState.execString))
+      try {
+        cli.processLine(sessionState.execString)
+      } catch {
+        case e: CommandProcessorException =>
+          exit(e.getResponseCode)
+      }
+      exit(0)
     }
 
     try {
       if (sessionState.fileName != null) {
-        exit(cli.processFile(sessionState.fileName))
+        try {
+          cli.processFile(sessionState.fileName)
+        } catch {
+          case e: CommandProcessorException =>
+            exit(e.getResponseCode)
+        }
+        exit(0)
       }
     } catch {
       case e: FileNotFoundException =>
@@ -498,27 +510,26 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
           if (sessionState.getIsVerbose) {
             out.println(cmd)
           }
-          val rc = driver.run(cmd)
+          try {
+            driver.run(cmd)
+          } catch {
+            case e: CommandProcessorException =>
+              val format = SparkSQLEnv.sqlContext.conf.errorMessageFormat
+              val msg = e match {
+                case st: SparkThrowable with Throwable =>
+                  SparkThrowableHelper.getMessage(st, format)
+                case _ => e.getMessage
+              }
+              err.println(msg)
+              if (format == ErrorMessageFormat.PRETTY &&
+                !sessionState.getIsSilent && (e.getCause != null)) {
+                e.printStackTrace(err)
+              }
+          }
+
           val endTimeNs = System.nanoTime()
           val timeTaken: Double = TimeUnit.NANOSECONDS.toMillis(endTimeNs - startTimeNs) / 1000.0
-
-          ret = rc.getResponseCode
-          if (ret != 0) {
-            val format = SparkSQLEnv.sqlContext.conf.errorMessageFormat
-            val e = rc.getException
-            val msg = e match {
-              case st: SparkThrowable with Throwable => SparkThrowableHelper.getMessage(st, format)
-              case _ => e.getMessage
-            }
-            err.println(msg)
-            if (format == ErrorMessageFormat.PRETTY &&
-                !sessionState.getIsSilent &&
-                (!e.isInstanceOf[AnalysisException] || e.getCause != null)) {
-              e.printStackTrace(err)
-            }
-            driver.close()
-            return ret
-          }
+          driver.close()
 
           val res = new JArrayList[String]()
 
@@ -564,7 +575,13 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
           if (sessionState.getIsVerbose) {
             sessionState.out.println(tokens(0) + " " + cmd_1)
           }
-          ret = proc.run(cmd_1).getResponseCode
+          try {
+            proc.run(cmd_1)
+            ret = 0
+          } catch {
+            case e: CommandProcessorException =>
+              ret = e.getResponseCode
+          }
         }
         // scalastyle:on println
       }
@@ -621,13 +638,11 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
             lastRet = ret
             val ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS)
             if (ret != 0 && !ignoreErrors) {
-              CommandProcessorFactory.clean(conf.asInstanceOf[HiveConf])
               return ret
             }
           }
         }
       }
-      CommandProcessorFactory.clean(conf.asInstanceOf[HiveConf])
       lastRet
     } finally {
       // Once we are done processing the line, restore the old handler
@@ -744,4 +759,3 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
     ret
   }
 }
-

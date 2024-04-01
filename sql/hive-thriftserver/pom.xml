@@ -32,6 +32,7 @@
   <url>https://spark.apache.org/</url>
   <properties>
     <sbt.project.name>hive-thriftserver</sbt.project.name>
+    <hive.version>4.0.0-beta-1</hive.version>
   </properties>
 
   <dependencies>
@@ -74,18 +75,36 @@
     <dependency>
       <groupId>${hive.group}</groupId>
       <artifactId>hive-cli</artifactId>
+      <version>${hive.version}</version>
     </dependency>
     <dependency>
       <groupId>${hive.group}</groupId>
       <artifactId>hive-jdbc</artifactId>
+      <version>${hive.version}</version>
     </dependency>
     <dependency>
       <groupId>${hive.group}</groupId>
       <artifactId>hive-beeline</artifactId>
+      <version>${hive.version}</version>
     </dependency>
     <dependency>
       <groupId>${hive.group}</groupId>
       <artifactId>hive-service-rpc</artifactId>
+      <version>${hive.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${hive.group}</groupId>
+      <artifactId>hive-common</artifactId>
+      <scope>${hive.common.scope}</scope>
+    </dependency>
+    <dependency>
+      <groupId>${hive.group}</groupId>
+      <artifactId>hive-exec</artifactId>
+      <version>4.0.0-beta-1</version>
+    </dependency>
+    <dependency>
+      <groupId>${hive.group}</groupId>
+      <artifactId>hive-metastore</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
