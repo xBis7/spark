@@ -33,6 +33,7 @@ import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.util._
+import org.apache.spark.sql.catalyst.util.RebaseDateTime.rebaseJulianToGregorianDays
 import org.apache.spark.sql.execution.datasources.DaysWritable
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types._
@@ -632,7 +633,13 @@ private[hive] trait HiveInspectors {
         case x: DateObjectInspector if x.preferWritable() =>
           data: Any => {
             if (data != null) {
-              new DaysWritable(x.getPrimitiveWritableObject(data)).gregorianDays
+              // We can create an overloaded constructor
+              // that accepts DateWritableV2 and use that instead.
+              // There is no issue with the Intellij compiler, but the maven compiler
+              // raises an error and prompts us to use the default constructor.
+              // It might be due to DaysWritable extending DateWritable and not DateWritableV2.
+              val dw = x.getPrimitiveWritableObject(data)
+              new DaysWritable(rebaseJulianToGregorianDays(dw.getDays), dw.getDays).gregorianDays
             } else {
               null
             }

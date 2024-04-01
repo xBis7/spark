@@ -20,7 +20,7 @@ package org.apache.spark.sql.execution.datasources
 import java.io.{DataInput, DataOutput, IOException}
 import java.sql.Date
 
-import org.apache.hadoop.hive.serde2.io.{DateWritable, DateWritableV2}
+import org.apache.hadoop.hive.serde2.io.DateWritable
 import org.apache.hadoop.io.WritableUtils
 
 import org.apache.spark.sql.catalyst.util.RebaseDateTime.{rebaseGregorianToJulianDays, rebaseJulianToGregorianDays}
@@ -52,8 +52,6 @@ class DaysWritable(
       },
       julianDays = dateWritable.getDays)
   }
-  def this(dateWritableV2: DateWritableV2) =
-    this(rebaseJulianToGregorianDays(dateWritableV2.getDays), julianDays = dateWritableV2.getDays)
 
   override def getDays: Int = julianDays
   override def get: Date = {
