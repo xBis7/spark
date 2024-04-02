@@ -319,7 +319,13 @@ private[hive] object SparkSQLCLIDriver extends Logging {
 
         if (line.trim().endsWith(";") && !line.trim().endsWith("\\;")) {
           line = prefix + line
-          ret = cli.processLine(line, true)
+          try {
+            cli.processLine(line, true)
+          } catch {
+            case e: CommandProcessorException =>
+              ret = 1
+          }
+
           prefix = ""
           currentPrompt = promptWithCurrentDB
         } else {
@@ -491,7 +497,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
       console.printInfo(s"Time taken: $timeTaken seconds")
       new CommandProcessorResponse()
     } else {
-      var ret = null
+      var ret = new CommandProcessorResponse()
       val hconf = conf.asInstanceOf[HiveConf]
       val proc: CommandProcessor = CommandProcessorFactory.get(tokens, hconf)
 
@@ -524,13 +530,17 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
                 !sessionState.getIsSilent && (e.getCause != null)) {
                 e.printStackTrace(err)
               }
+              // Throw it to handle it in the outer method.
+              throw e
           }
 
           val endTimeNs = System.nanoTime()
           val timeTaken: Double = TimeUnit.NANOSECONDS.toMillis(endTimeNs - startTimeNs) / 1000.0
           driver.close()
 
-          if (ret != null) { // TODO: check Schema.
+          // If it was a success, then Schema and Message will be null.
+          // Same logic as before. Return here if there is an error.
+          if (ret.getMessage != null) {
             return ret
           }
 
@@ -559,13 +569,14 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
                 s"""Failed with exception ${e.getClass.getName}: ${e.getMessage}
                    |${org.apache.hadoop.util.StringUtils.stringifyException(e)}
                  """.stripMargin)
-              ret = 1
+              ret = new CommandProcessorResponse(null, e.getMessage)
           }
 
-          val cret = driver.close()
-          if (ret == 0) {
-            ret = cret
-          }
+          // This is redundant.
+//          val cret = driver.close()
+//          if (ret == 0) {
+//            ret = cret
+//          }
 
           var responseMsg = s"Time taken: $timeTaken seconds"
           if (counter != 0) {
@@ -578,7 +589,13 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
           if (sessionState.getIsVerbose) {
             sessionState.out.println(tokens(0) + " " + cmd_1)
           }
-          ret = proc.run(cmd_1)
+          try {
+            ret = proc.run(cmd_1)
+          } catch {
+            case e: CommandProcessorException =>
+//              ret = new CommandProcessorResponse(null, e.getMessage)
+              throw e
+          }
         }
         // scalastyle:on println
       }
@@ -587,7 +604,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
   }
 
   // Adapted processLine from Hive 2.3's CliDriver.processLine.
-  override def processLine(line: String, allowInterrupting: Boolean): Int = {
+  override def processLine(line: String, allowInterrupting: Boolean): CommandProcessorResponse = {
     var oldSignal: SignalHandler = null
     var interruptSignal: Signal = null
 
@@ -619,7 +636,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
     }
 
     try {
-      var lastRet: Int = 0
+      var ret = new CommandProcessorResponse()
 
       // we can not use "split" function directly as ";" may be quoted
       val commands = splitSemiColon(line).asScala
@@ -630,17 +647,23 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
         } else {
           command += oneCmd
           if (!StringUtils.isBlank(command)) {
-            val ret = processCmd(command)
-            command = ""
-            lastRet = ret
-            val ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS)
-            if (ret != 0 && !ignoreErrors) {
-              return ret
+            try {
+              ret = processCmd(command)
+              command = ""
+            } catch {
+              case e: CommandProcessorException =>
+                val ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS)
+                if (!ignoreErrors) {
+                  // Throw the ex to handle it in the parent method.
+                  throw e
+                } else {
+                  return ret
+                }
             }
           }
         }
       }
-      lastRet
+      ret
     } finally {
       // Once we are done processing the line, restore the old handler
       if (oldSignal != null && interruptSignal != null) {
