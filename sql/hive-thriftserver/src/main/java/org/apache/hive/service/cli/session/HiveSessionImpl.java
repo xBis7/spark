@@ -108,16 +108,6 @@ public class HiveSessionImpl implements HiveSession {
     this.hiveConf = new HiveConf(serverhiveConf);
     this.ipAddress = ipAddress;
 
-    try {
-      // In non-impersonation mode, map scheduler queue to current user
-      // if fair scheduler is configured.
-      if (! hiveConf.getBoolVar(ConfVars.HIVE_SERVER2_ENABLE_DOAS) &&
-        hiveConf.getBoolVar(ConfVars.HIVE_SERVER2_MAP_FAIR_SCHEDULER_QUEUE)) {
-        ShimLoader.getHadoopShims().refreshDefaultQueue(hiveConf, username);
-      }
-    } catch (IOException e) {
-      LOG.warn("Error setting scheduler queue: " + e, e);
-    }
     // Set an explicit session name to control the download directory name
     hiveConf.set(ConfVars.HIVESESSIONID.varname,
         sessionHandle.getHandleIdentifier().toString());
