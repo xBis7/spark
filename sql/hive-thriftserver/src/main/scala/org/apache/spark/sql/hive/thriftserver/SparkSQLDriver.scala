@@ -91,10 +91,9 @@ private[hive] class SparkSQLDriver(val context: SQLContext = SparkSQLEnv.sqlCont
     }
   }
 
-  override def close(): Int = {
+  override def close(): Unit = {
     hiveResponse = null
     tableSchema = null
-    0
   }
 
   override def getResults(res: JList[_]): Boolean = {
