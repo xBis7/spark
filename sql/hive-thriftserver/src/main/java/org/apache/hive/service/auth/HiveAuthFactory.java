@@ -27,7 +27,6 @@ import javax.security.sasl.Sasl;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
-import org.apache.hadoop.hive.metastore.HiveMetaStore;
 import org.apache.hadoop.hive.metastore.HMSHandler;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.shims.HadoopShims.KerberosNameShim;
@@ -115,9 +114,10 @@ public class HiveAuthFactory {
       if (authTypeStr.equalsIgnoreCase(AuthTypes.KERBEROS.getAuthName())) {
         String principal = conf.getVar(ConfVars.HIVE_SERVER2_KERBEROS_PRINCIPAL);
         String keytab = conf.getVar(ConfVars.HIVE_SERVER2_KERBEROS_KEYTAB);
+        String clientConf = conf.getVar(ConfVars.HIVE_SERVER2_CLIENT_KERBEROS_PRINCIPAL);
         if (needUgiLogin(UserGroupInformation.getCurrentUser(),
           SecurityUtil.getServerPrincipal(principal, "0.0.0.0"), keytab)) {
-          saslServer = ShimLoader.getHadoopThriftAuthBridge().createServer(principal, keytab);
+          saslServer = HadoopThriftAuthBridge.getBridge().createServer(principal, keytab, clientConf);
         } else {
           // Using the default constructor to avoid unnecessary UGI login.
           saslServer = new HadoopThriftAuthBridge.Server();

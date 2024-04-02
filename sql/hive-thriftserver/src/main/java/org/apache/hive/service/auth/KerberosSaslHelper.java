@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.Map;
 import javax.security.sasl.SaslException;
 
-import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.hive.metastore.security.HadoopThriftAuthBridge;
 import org.apache.hadoop.hive.metastore.security.HadoopThriftAuthBridge.Server;
 import org.apache.hive.service.cli.thrift.ThriftCLIService;
@@ -51,7 +50,7 @@ public final class KerberosSaslHelper {
         return createSubjectAssumedTransport(principal, underlyingTransport, saslProps);
       } else {
         HadoopThriftAuthBridge.Client authBridge =
-          ShimLoader.getHadoopThriftAuthBridge().createClientWithConf("kerberos");
+          HadoopThriftAuthBridge.getBridge().createClientWithConf("kerberos");
         return authBridge.createClientTransport(principal, host, "KERBEROS", null,
                                                 underlyingTransport, saslProps);
       }
@@ -76,7 +75,7 @@ public final class KerberosSaslHelper {
   public static TTransport getTokenTransport(String tokenStr, String host,
     TTransport underlyingTransport, Map<String, String> saslProps) throws SaslException {
     HadoopThriftAuthBridge.Client authBridge =
-      ShimLoader.getHadoopThriftAuthBridge().createClientWithConf("kerberos");
+      HadoopThriftAuthBridge.getBridge().createClientWithConf("kerberos");
 
     try {
       return authBridge.createClientTransport(null, host, "DIGEST", tokenStr, underlyingTransport,
