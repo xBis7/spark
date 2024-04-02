@@ -318,6 +318,7 @@ public class LogDivertAppender extends AbstractWriterAppender<WriterManager> {
       LOG.debug(" ---+++=== Dropped log event from thread " + event.getThreadName());
       return;
     }
-    log.writeOperationLog(logOutput);
+    // `writeOperationLog` has been removed since HIVE-16061.
+//    log.writeOperationLog(logOutput);
   }
 }
