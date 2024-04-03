@@ -180,14 +180,9 @@ public class LogDivertAppender extends AbstractWriterAppender<WriterManager> {
 
     @Override
     public Result filter(LogEvent logEvent) {
-      OperationLog log = operationManager.getOperationLogByThread();
       boolean excludeMatches = (loggingMode == OperationLog.LoggingLevel.VERBOSE);
 
-      if (log == null) {
-        return Result.DENY;
-      }
-
-      OperationLog.LoggingLevel currentLoggingMode = log.getOpLoggingLevel();
+      OperationLog.LoggingLevel currentLoggingMode = OperationLog.getLoggingLevel(loggingMode.name());
       // If logging is disabled, deny everything.
       if (currentLoggingMode == OperationLog.LoggingLevel.NONE) {
         return Result.DENY;
@@ -292,33 +287,5 @@ public class LogDivertAppender extends AbstractWriterAppender<WriterManager> {
     this.isVerbose = (loggingMode == OperationLog.LoggingLevel.VERBOSE);
     this.operationManager = operationManager;
     addFilter(new NameFilter(loggingMode, operationManager));
-  }
-
-  @Override
-  public void append(LogEvent event) {
-    OperationLog log = operationManager.getOperationLogByThread();
-
-    // Set current layout depending on the verbose/non-verbose mode.
-    if (log != null) {
-      boolean isCurrModeVerbose = (log.getOpLoggingLevel() == OperationLog.LoggingLevel.VERBOSE);
-
-      // If there is a logging level change from verbose->non-verbose or vice-versa since
-      // the last subAppend call, change the layout to preserve consistency.
-      if (isCurrModeVerbose != isVerbose) {
-        isVerbose = isCurrModeVerbose;
-      }
-    }
-    super.append(event);
-
-    // That should've gone into our writer. Notify the LogContext.
-    String logOutput = writer.toString();
-    writer.reset();
-
-    if (log == null) {
-      LOG.debug(" ---+++=== Dropped log event from thread " + event.getThreadName());
-      return;
-    }
-    // `writeOperationLog` has been removed since HIVE-16061.
-//    log.writeOperationLog(logOutput);
   }
 }

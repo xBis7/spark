@@ -280,10 +280,6 @@ public class OperationManager extends AbstractService {
     return schema;
   }
 
-  public OperationLog getOperationLogByThread() {
-    return OperationLog.getCurrentOperationLog();
-  }
-
   public List<Operation> removeExpiredOperations(OperationHandle[] handles) {
     List<Operation> removed = new ArrayList<Operation>();
     for (OperationHandle handle : handles) {

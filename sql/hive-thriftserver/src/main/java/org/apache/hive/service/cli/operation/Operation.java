@@ -17,7 +17,6 @@
 package org.apache.hive.service.cli.operation;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.QueryState;
-import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.OperationLog;
 import org.apache.hive.service.cli.FetchOrientation;
 import org.apache.hive.service.cli.HiveSQLException;
@@ -229,23 +227,7 @@ public abstract class Operation {
       }
 
       // create OperationLog object with above log file
-      try {
-        operationLog = new OperationLog(opHandle.toString(), operationLogFile, parentSession.getHiveConf());
-      } catch (FileNotFoundException e) {
-        LOG.warn("Unable to instantiate OperationLog object for operation: " +
-            opHandle, e);
-        isOperationLogEnabled = false;
-        return;
-      }
-
-      // register this operationLog to current thread
-      OperationLog.setCurrentOperationLog(operationLog);
-    }
-  }
-
-  protected void unregisterOperationLog() {
-    if (isOperationLogEnabled) {
-      OperationLog.removeCurrentOperationLog();
+      operationLog = new OperationLog(opHandle.toString(), operationLogFile, parentSession.getHiveConf());
     }
   }
 
@@ -258,14 +240,6 @@ public abstract class Operation {
   }
 
   /**
-   * Invoked after runInternal(), even if an exception is thrown in runInternal().
-   * Clean up resources, which was set up in beforeRun().
-   */
-  protected void afterRun() {
-    unregisterOperationLog();
-  }
-
-  /**
    * Implemented by subclass of Operation class to execute specific behaviors.
    * @throws HiveSQLException
    */
@@ -273,11 +247,7 @@ public abstract class Operation {
 
   public void run() throws HiveSQLException {
     beforeRun();
-    try {
-      runInternal();
-    } finally {
-      afterRun();
-    }
+    runInternal();
   }
 
   protected void cleanupOperationLog() {
@@ -328,15 +298,6 @@ public abstract class Operation {
       throw new HiveSQLException("The fetch type " + orientation.toString() +
           " is not supported for this resultset", "HY106");
     }
-  }
-
-  protected HiveSQLException toSQLException(String prefix, CommandProcessorResponse response) {
-    HiveSQLException ex = new HiveSQLException(prefix + ": " + response.getErrorMessage(),
-        response.getSQLState(), response.getResponseCode());
-    if (response.getException() != null) {
-      ex.initCause(response.getException());
-    }
-    return ex;
   }
 
   protected Map<String, String> getConfOverlay() {
