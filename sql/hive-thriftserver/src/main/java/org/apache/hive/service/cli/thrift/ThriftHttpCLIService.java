@@ -32,7 +32,12 @@ import org.apache.hive.service.auth.HiveAuthFactory;
 import org.apache.hive.service.cli.CLIService;
 import org.apache.hive.service.rpc.thrift.TCLIService;
 import org.apache.hive.service.rpc.thrift.TCLIService.Iface;
+import org.apache.hive.service.rpc.thrift.TDownloadDataReq;
+import org.apache.hive.service.rpc.thrift.TDownloadDataResp;
+import org.apache.hive.service.rpc.thrift.TUploadDataReq;
+import org.apache.hive.service.rpc.thrift.TUploadDataResp;
 import org.apache.hive.service.server.ThreadFactoryWithGarbageCleanup;
+import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
@@ -209,5 +214,29 @@ public class ThriftHttpCLIService extends ThriftCLIService {
       }
     }
     return httpPath;
+  }
+
+  @Override
+  public TUploadDataResp UploadData(TUploadDataReq tUploadDataReq) throws TException {
+    /**
+     * This is a new feature.
+     * Hive-Jira: https://issues.apache.org/jira/browse/HIVE-24893
+     * Hive-PR: https://github.com/apache/hive/pull/2878
+     *
+     * TODO: implement this.
+     */
+    return null;
+  }
+
+  @Override
+  public TDownloadDataResp DownloadData(TDownloadDataReq tDownloadDataReq) throws TException {
+    /**
+     * This is a new feature.
+     * Hive-Jira: https://issues.apache.org/jira/browse/HIVE-24893
+     * Hive-PR: https://github.com/apache/hive/pull/2878
+     *
+     * TODO: implement this.
+     */
+    return null;
   }
 }
