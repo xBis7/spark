@@ -84,7 +84,11 @@ public abstract class Operation {
     lastAccessTime = System.currentTimeMillis();
     operationTimeout = HiveConf.getTimeVar(parentSession.getHiveConf(),
         HiveConf.ConfVars.HIVE_SERVER2_IDLE_OPERATION_TIMEOUT, TimeUnit.MILLISECONDS);
-    queryState = new QueryState(parentSession.getHiveConf(), confOverlay, runInBackground);
+    queryState = new QueryState.Builder()
+        .withHiveConf(parentSession.getHiveConf())
+        .withConfOverlay(confOverlay)
+        .withGenerateNewQueryId(true)
+        .build();
   }
 
   public Future<?> getBackgroundHandle() {

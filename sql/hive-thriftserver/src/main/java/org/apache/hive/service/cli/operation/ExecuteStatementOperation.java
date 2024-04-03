@@ -34,16 +34,4 @@ public abstract class ExecuteStatementOperation extends Operation {
   public String getStatement() {
     return statement;
   }
-
-  protected void registerCurrentOperationLog() {
-    if (isOperationLogEnabled) {
-      if (operationLog == null) {
-        LOG.warn("Failed to get current OperationLog object of Operation: " +
-          getHandle().getHandleIdentifier());
-        isOperationLogEnabled = false;
-        return;
-      }
-      OperationLog.setCurrentOperationLog(operationLog);
-    }
-  }
 }
