@@ -32,8 +32,14 @@ import org.apache.hive.service.ServiceException;
 import org.apache.hive.service.auth.HiveAuthFactory;
 import org.apache.hive.service.cli.CLIService;
 import org.apache.hive.service.cli.HiveSQLException;
+import org.apache.hive.service.cli.OperationHandle;
+import org.apache.hive.service.cli.SessionHandle;
+import org.apache.hive.service.rpc.thrift.TDownloadDataReq;
+import org.apache.hive.service.rpc.thrift.TDownloadDataResp;
 import org.apache.hive.service.rpc.thrift.TGetQueryIdReq;
 import org.apache.hive.service.rpc.thrift.TGetQueryIdResp;
+import org.apache.hive.service.rpc.thrift.TUploadDataReq;
+import org.apache.hive.service.rpc.thrift.TUploadDataResp;
 import org.apache.hive.service.server.ThreadFactoryWithGarbageCleanup;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessorFactory;
@@ -127,6 +133,32 @@ public class ThriftBinaryCLIService extends ThriftCLIService {
     } catch (HiveSQLException e) {
       throw new TException(e);
     }
+  }
+
+  @Override
+  public TUploadDataResp UploadData(TUploadDataReq req) throws TException {
+    /**
+     * This is a new feature.
+     * Hive-Jira: https://issues.apache.org/jira/browse/HIVE-24893
+     * Hive-PR: https://github.com/apache/hive/pull/2878
+     *
+     * TODO: implement this.
+     */
+    return null;
+  }
+
+  @Override
+  public TDownloadDataResp DownloadData(TDownloadDataReq req) throws TException {
+    /**
+     * This is a new feature.
+     * Hive-Jira: https://issues.apache.org/jira/browse/HIVE-24893
+     * Hive-PR: https://github.com/apache/hive/pull/2878
+     *
+     * TODO: implement this.
+     */
+//    Check org.apache.hive.service.cli.CLIService # uploadData()
+//    cliService.getSessionManager().downloadData(req.getSessionHandle(), ...);
+    return null;
   }
 
   @Override
