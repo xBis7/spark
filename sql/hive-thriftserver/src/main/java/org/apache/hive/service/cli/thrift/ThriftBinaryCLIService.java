@@ -32,8 +32,6 @@ import org.apache.hive.service.ServiceException;
 import org.apache.hive.service.auth.HiveAuthFactory;
 import org.apache.hive.service.cli.CLIService;
 import org.apache.hive.service.cli.HiveSQLException;
-import org.apache.hive.service.cli.OperationHandle;
-import org.apache.hive.service.cli.SessionHandle;
 import org.apache.hive.service.rpc.thrift.TDownloadDataReq;
 import org.apache.hive.service.rpc.thrift.TDownloadDataResp;
 import org.apache.hive.service.rpc.thrift.TGetQueryIdReq;
@@ -76,6 +74,7 @@ public class ThriftBinaryCLIService extends ThriftCLIService {
       for (String sslVersion : hiveConf.getVar(ConfVars.HIVE_SSL_PROTOCOL_BLACKLIST).split(",")) {
         sslVersionBlacklist.add(sslVersion);
       }
+
       if (!hiveConf.getBoolVar(ConfVars.HIVE_SERVER2_USE_SSL)) {
         serverSocket = HiveAuthUtils.getServerSocket(hiveHost, portNum);
       } else {
@@ -86,8 +85,11 @@ public class ThriftBinaryCLIService extends ThriftCLIService {
         }
         String keyStorePassword = ShimLoader.getHadoopShims().getPassword(hiveConf,
             HiveConf.ConfVars.HIVE_SERVER2_SSL_KEYSTORE_PASSWORD.varname);
+        String keyStoreType = hiveConf.getVar(ConfVars.HIVE_SERVER2_SSL_KEYSTORE_TYPE);
+        String keyStoreAlgorithm = hiveConf.getVar(ConfVars.HIVE_SERVER2_SSL_KEYMANAGERFACTORY_ALGORITHM);
+        String includeCipherSuites = hiveConf.getVar(ConfVars.HIVE_SERVER2_SSL_BINARY_INCLUDE_CIPHERSUITES).trim();
         serverSocket = HiveAuthUtils.getServerSSLSocket(hiveHost, portNum, keyStorePath,
-            keyStorePassword, sslVersionBlacklist);
+            keyStorePassword, keyStoreType, keyStoreAlgorithm, sslVersionBlacklist, includeCipherSuites);
       }
 
       // In case HIVE_SERVER2_THRIFT_PORT or hive.server2.thrift.port is configured with 0 which
