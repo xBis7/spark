@@ -235,7 +235,7 @@ private[spark] object HiveUtils extends Logging {
    * Hive jars paths, only work when `HIVE_METASTORE_JARS` is `path`.
    */
   private def hiveMetastoreJarsPath(conf: SQLConf): Seq[String] = {
-    conf.getConf(HIVE_METASTORE_JARS_PATH)
+    conf.getConf(HIVE_METASTORE_JARS_PATH).to[collection.immutable.Seq]
   }
 
   /**
@@ -246,7 +246,7 @@ private[spark] object HiveUtils extends Logging {
    * custom appenders that are used by log4j.
    */
   private def hiveMetastoreSharedPrefixes(conf: SQLConf): Seq[String] = {
-    conf.getConf(HIVE_METASTORE_SHARED_PREFIXES).filterNot(_ == "")
+    conf.getConf(HIVE_METASTORE_SHARED_PREFIXES).filterNot(_ == "").to[collection.immutable.Seq]
   }
 
   /**
@@ -255,7 +255,7 @@ private[spark] object HiveUtils extends Logging {
    * prefix that typically would be shared (i.e. org.apache.spark.*)
    */
   private def hiveMetastoreBarrierPrefixes(conf: SQLConf): Seq[String] = {
-    conf.getConf(HIVE_METASTORE_BARRIER_PREFIXES).filterNot(_ == "")
+    conf.getConf(HIVE_METASTORE_BARRIER_PREFIXES).filterNot(_ == "").to[collection.immutable.Seq]
   }
 
   /**
@@ -273,7 +273,7 @@ private[spark] object HiveUtils extends Logging {
       ConfVars.METASTORE_CLIENT_CONNECT_RETRY_DELAY -> TimeUnit.SECONDS,
       ConfVars.METASTORE_CLIENT_SOCKET_TIMEOUT -> TimeUnit.SECONDS,
       ConfVars.METASTORE_CLIENT_SOCKET_LIFETIME -> TimeUnit.SECONDS,
-      ConfVars.HMSHANDLERINTERVAL -> TimeUnit.MILLISECONDS,
+      ConfVars.HMS_HANDLER_INTERVAL -> TimeUnit.MILLISECONDS,
       ConfVars.METASTORE_EVENT_DB_LISTENER_TTL -> TimeUnit.SECONDS,
       ConfVars.METASTORE_EVENT_CLEAN_FREQ -> TimeUnit.SECONDS,
       ConfVars.METASTORE_EVENT_EXPIRY_DURATION -> TimeUnit.SECONDS,
@@ -391,7 +391,7 @@ private[spark] object HiveUtils extends Logging {
     val hiveMetastoreBarrierPrefixes = HiveUtils.hiveMetastoreBarrierPrefixes(sqlConf)
     val metaVersion = IsolatedClientLoader.hiveVersion(hiveMetastoreVersion)
 
-    def addLocalHiveJars(file: File): Seq[URL] = {
+    def addLocalHiveJars(file: File): scala.Seq[URL] = {
       if (file.getName == "*") {
         val files = file.getParentFile.listFiles()
         if (files == null) {
@@ -482,7 +482,7 @@ private[spark] object HiveUtils extends Logging {
         version = metaVersion,
         sparkConf = conf,
         hadoopConf = hadoopConf,
-        execJars = jars.toSeq,
+        execJars = jars.to[collection.immutable.Seq],
         config = configurations,
         isolationOn = true,
         barrierPrefixes = hiveMetastoreBarrierPrefixes,
@@ -507,7 +507,7 @@ private[spark] object HiveUtils extends Logging {
       }
     }
     propMap.put(WAREHOUSE_PATH.key, localMetastore.toURI.toString)
-    propMap.put(HiveConf.ConfVars.METASTORECONNECTURLKEY.varname,
+    propMap.put(HiveConf.ConfVars.METASTORE_CONNECT_URL_KEY.varname,
       s"jdbc:derby:${withInMemoryMode};databaseName=${localMetastore.getAbsolutePath};create=true")
     propMap.put("datanucleus.rdbms.datastoreAdapterClassName",
       "org.datanucleus.store.rdbms.adapter.DerbyAdapter")
@@ -531,7 +531,7 @@ private[spark] object HiveUtils extends Logging {
     // You can search HiveConf.ConfVars.METASTOREURIS in the code of HiveConf (in Hive's repo).
     // Then, you will find that the local metastore mode is only set to true when
     // hive.metastore.uris is not set.
-    propMap.put(ConfVars.METASTOREURIS.varname, "")
+    propMap.put(ConfVars.METASTORE_URIS.varname, "")
 
     // The execution client will generate garbage events, therefore the listeners that are generated
     // for the execution clients are useless. In order to not output garbage, we don't generate

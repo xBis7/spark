@@ -156,7 +156,7 @@ private[hive] class HiveClientImpl(
         // hive.metastore.warehouse.dir is determined in SharedState after the CliSessionState
         // instance constructed, we need to follow that change here.
         warehouseDir.foreach { dir =>
-          ret.getConf.setVar(ConfVars.METASTOREWAREHOUSE, dir)
+          ret.getConf.setVar(ConfVars.METASTORE_WAREHOUSE, dir)
         }
         ret
       } else {
@@ -168,7 +168,7 @@ private[hive] class HiveClientImpl(
   // Log the default warehouse location.
   logInfo(
     s"Warehouse location for Hive client " +
-      s"(version ${version.fullVersion}) is ${conf.getVar(ConfVars.METASTOREWAREHOUSE)}")
+      s"(version ${version.fullVersion}) is ${conf.getVar(ConfVars.METASTORE_WAREHOUSE)}")
 
   private def newState(): SessionState = {
     val hiveConf = newHiveConf(sparkConf, hadoopConf, extraConfig, Some(initClassLoader))
@@ -198,8 +198,8 @@ private[hive] class HiveClientImpl(
     // bin/spark-shell, bin/spark-sql and sbin/start-thriftserver.sh to automatically create the
     // Derby Metastore when running Spark in the non-production environment.
     val isEmbeddedMetaStore = {
-      val msUri = hiveConf.getVar(ConfVars.METASTOREURIS)
-      val msConnUrl = hiveConf.getVar(ConfVars.METASTORECONNECTURLKEY)
+      val msUri = hiveConf.getVar(ConfVars.METASTORE_URIS)
+      val msConnUrl = hiveConf.getVar(ConfVars.METASTORE_CONNECT_URL_KEY)
       (msUri == null || msUri.trim().isEmpty) &&
         (msConnUrl != null && msConnUrl.startsWith("jdbc:derby"))
     }
@@ -217,7 +217,7 @@ private[hive] class HiveClientImpl(
   }
 
   // We use hive's conf for compatibility.
-  private val retryLimit = conf.getIntVar(HiveConf.ConfVars.METASTORETHRIFTFAILURERETRIES)
+  private val retryLimit = conf.getIntVar(HiveConf.ConfVars.METASTORE_THRIFT_FAILURE_RETRIES)
   private val retryDelayMillis = shim.getMetastoreClientConnectRetryDelayMillis(conf)
 
   /**
@@ -407,7 +407,7 @@ private[hive] class HiveClientImpl(
   }
 
   override def listDatabases(pattern: String): Seq[String] = withHiveState {
-    shim.getDatabasesByPattern(client, pattern)
+    shim.getDatabasesByPattern(client, pattern).to[collection.immutable.Seq]
   }
 
   private def getRawTableOption(dbName: String, tableName: String): Option[HiveTable] = {
@@ -418,7 +418,7 @@ private[hive] class HiveClientImpl(
     try {
       shim.recordHiveCall()
       msClient.getTableObjectsByName(dbName, tableNames.asJava).asScala
-        .map(extraFixesForNonView).map(new HiveTable(_)).toSeq
+        .map(extraFixesForNonView).map(new HiveTable(_)).to[collection.immutable.Seq]
     } catch {
       case ex: Exception =>
         throw QueryExecutionErrors.cannotFetchTablesOfDatabaseError(dbName, ex)

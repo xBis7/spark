@@ -32,7 +32,7 @@
   <url>https://spark.apache.org/</url>
   <properties>
     <sbt.project.name>hive-thriftserver</sbt.project.name>
-    <hive.version>4.0.0-beta-1</hive.version>
+    <hive.version>4.0.0</hive.version>
   </properties>
 
   <dependencies>
