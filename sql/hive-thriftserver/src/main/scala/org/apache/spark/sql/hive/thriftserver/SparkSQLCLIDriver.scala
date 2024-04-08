@@ -180,7 +180,7 @@ private[hive] object SparkSQLCLIDriver extends Logging {
     // In SparkSQL CLI, we may want to use jars augmented by hiveconf
     // hive.aux.jars.path, here we add jars augmented by hiveconf to
     // Spark's SessionResourceLoader to obtain these jars.
-    val auxJars = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEAUXJARS)
+    val auxJars = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_AUX_JARS)
     if (StringUtils.isNotBlank(auxJars)) {
       val resourceLoader = SparkSQLEnv.sqlContext.sessionState.resourceLoader
       StringUtils.split(auxJars, ",").foreach(resourceLoader.addJar(_))
@@ -652,7 +652,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
               command = ""
             } catch {
               case e: CommandProcessorException =>
-                val ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS)
+                val ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLI_IGNORE_ERRORS)
                 if (!ignoreErrors) {
                   // Throw the ex to handle it in the parent method.
                   throw e
