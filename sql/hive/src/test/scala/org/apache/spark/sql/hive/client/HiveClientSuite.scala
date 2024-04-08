@@ -40,6 +40,7 @@ import org.apache.spark.sql.hive.test.TestHiveVersion
 import org.apache.spark.sql.types.{IntegerType, StructType}
 import org.apache.spark.util.{MutableURLClassLoader, Utils}
 
+// TODO: Extend for Hive 4.0
 class HiveClientSuite(version: String, allVersions: Seq[String])
   extends HiveVersionSuite(version) {
 

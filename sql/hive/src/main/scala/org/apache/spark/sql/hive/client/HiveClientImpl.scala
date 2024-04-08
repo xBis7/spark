@@ -127,6 +127,7 @@ private[hive] class HiveClientImpl(
     case hive.v2_3 => new Shim_v2_3()
     case hive.v3_0 => new Shim_v3_0()
     case hive.v3_1 => new Shim_v3_1()
+    case hive.v4_0 => new Shim_v4_0()
   }
 
   // Create an internal session state for this HiveClientImpl.
@@ -864,7 +865,7 @@ private[hive] class HiveClientImpl(
       // Since HIVE-18238(Hive 3.0.0), the Driver.close function's return type changed
       // and the CommandProcessorFactory.clean function removed.
       driver.getClass.getMethod("close").invoke(driver)
-      if (version != hive.v3_0 && version != hive.v3_1) {
+      if (version != hive.v3_0 && version != hive.v3_1 && version != hive.v4_0) {
         // As the comment above mentions, clean has been removed in Hive 3 and above.
         // In the base jar, which was Hive 2.X, `clean` exists but now we use a base jar from Hive4.
         // The optimal solution is to stop supporting any Hive version, older than Hive3.
