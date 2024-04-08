@@ -15,13 +15,14 @@ services:
       - ../..:/opt/spark
       - ./conf/hive-jars:/opt/spark/hive-jars
       - ./conf/spark-events:/opt/spark/spark-events
-      - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
-      - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml:ro
-      - ./conf/ranger-hive-audit.xml:/opt/spark/conf/ranger-hive-audit.xml:ro
-      - ./conf/ranger-hive-security.xml:/opt/spark/conf/ranger-hive-security.xml:ro
-      - ./conf/ranger-policymgr-ssl.xml:/opt/spark/conf/ranger-policymgr-ssl.xml:ro
-      - ./conf/core-site.xml:/opt/spark/conf/core-site.xml:ro
-      - ./conf/hdfs-site.xml:/opt/spark/conf/hdfs-site.xml:ro
+      - ./conf/work:/opt/spark/work
+      - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+      - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml
+      - ./conf/ranger-hive-audit.xml:/opt/spark/conf/ranger-hive-audit.xml
+      - ./conf/ranger-hive-security.xml:/opt/spark/conf/ranger-hive-security.xml
+      - ./conf/ranger-policymgr-ssl.xml:/opt/spark/conf/ranger-policymgr-ssl.xml
+      - ./conf/core-site.xml:/opt/spark/conf/core-site.xml
+      - ./conf/hdfs-site.xml:/opt/spark/conf/hdfs-site.xml
     networks:
       - ranger-net
 
@@ -32,21 +33,22 @@ services:
     depends_on:
       - spark-master
     environment:
-      - SPARK_WORKER_CORES=1  # Number of cores to use on each worker
-      - SPARK_WORKER_MEMORY=2g  # Amount of memory to use on each worker
+      - SPARK_WORKER_CORES=2  # Number of cores to use on each worker
+      - SPARK_WORKER_MEMORY=4g  # Amount of memory to use on each worker
       - SPARK_WORKER_WEBUI_PORT=8081
       - SPARK_LOCAL_IP=spark-worker
     volumes:
       - ../..:/opt/spark
       - ./conf/hive-jars:/opt/spark/hive-jars
       - ./conf/spark-events:/opt/spark/spark-events
-      - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
-      - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml:ro
-      - ./conf/ranger-hive-audit.xml:/opt/spark/conf/ranger-hive-audit.xml:ro
-      - ./conf/ranger-hive-security.xml:/opt/spark/conf/ranger-hive-security.xml:ro
-      - ./conf/ranger-policymgr-ssl.xml:/opt/spark/conf/ranger-policymgr-ssl.xml:ro
-      - ./conf/core-site.xml:/opt/spark/conf/core-site.xml:ro
-      - ./conf/hdfs-site.xml:/opt/spark/conf/hdfs-site.xml:ro
+      - ./conf/work:/opt/spark/work
+      - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+      - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml
+      - ./conf/ranger-hive-audit.xml:/opt/spark/conf/ranger-hive-audit.xml
+      - ./conf/ranger-hive-security.xml:/opt/spark/conf/ranger-hive-security.xml
+      - ./conf/ranger-policymgr-ssl.xml:/opt/spark/conf/ranger-policymgr-ssl.xml
+      - ./conf/core-site.xml:/opt/spark/conf/core-site.xml
+      - ./conf/hdfs-site.xml:/opt/spark/conf/hdfs-site.xml
     networks:
       - ranger-net
 
