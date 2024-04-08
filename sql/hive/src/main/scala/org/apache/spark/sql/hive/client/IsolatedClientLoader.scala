@@ -302,7 +302,7 @@ private[hive] class IsolatedClientLoader(
 
   /** The isolated client interface to Hive. */
   private[hive] def createClient(): HiveClient = synchronized {
-    val warehouseDir = Option(hadoopConf.get(ConfVars.METASTOREWAREHOUSE.varname))
+    val warehouseDir = Option(hadoopConf.get(ConfVars.METASTORE_WAREHOUSE.varname))
     if (!isolationOn) {
       return new HiveClientImpl(version, warehouseDir, sparkConf, hadoopConf, config,
         baseClassLoader, this)

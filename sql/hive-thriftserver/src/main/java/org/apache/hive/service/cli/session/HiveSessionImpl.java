@@ -109,7 +109,7 @@ public class HiveSessionImpl implements HiveSession {
     this.ipAddress = ipAddress;
 
     // Set an explicit session name to control the download directory name
-    hiveConf.set(ConfVars.HIVESESSIONID.varname,
+    hiveConf.set(ConfVars.HIVE_SESSION_ID.varname,
         sessionHandle.getHandleIdentifier().toString());
     // Use thrift transportable formatter
     hiveConf.set(SerDeUtils.LIST_SINK_OUTPUT_FORMATTER, ThriftFormatter.class.getName());
@@ -257,7 +257,7 @@ public class HiveSessionImpl implements HiveSession {
         new VariableSubstitution(() -> SessionState.get().getHiveVariables());
     HiveConf conf = SessionState.get().getConf();
     String value = substitution.substitute(conf, varvalue);
-    if (conf.getBoolVar(HiveConf.ConfVars.HIVECONFVALIDATION)) {
+    if (conf.getBoolVar(HiveConf.ConfVars.HIVE_CONF_VALIDATION)) {
       HiveConf.ConfVars confVars = HiveConf.getConfVars(key);
       if (confVars != null) {
         if (!confVars.isType(value)) {
@@ -396,7 +396,7 @@ public class HiveSessionImpl implements HiveSession {
 
   @Override
   public HiveConf getHiveConf() {
-    hiveConf.setVar(HiveConf.ConfVars.HIVEFETCHOUTPUTSERDE, FETCH_WORK_SERDE_CLASS);
+    hiveConf.setVar(HiveConf.ConfVars.HIVE_FETCH_OUTPUT_SERDE, FETCH_WORK_SERDE_CLASS);
     return hiveConf;
   }
 
@@ -676,8 +676,8 @@ public class HiveSessionImpl implements HiveSession {
   }
 
   private void cleanupPipeoutFile() {
-    String lScratchDir = hiveConf.getVar(ConfVars.LOCALSCRATCHDIR);
-    String sessionID = hiveConf.getVar(ConfVars.HIVESESSIONID);
+    String lScratchDir = hiveConf.getVar(ConfVars.LOCAL_SCRATCH_DIR);
+    String sessionID = hiveConf.getVar(ConfVars.HIVE_SESSION_ID);
 
     File[] fileAry = new File(lScratchDir).listFiles(
             (dir, name) -> name.startsWith(sessionID) && name.endsWith(".pipeout"));
