@@ -1803,4 +1803,20 @@ private[client] class Shim_v3_0 extends Shim_v2_3 {
 
 private[client] class Shim_v3_1 extends Shim_v3_0
 
-private[client] class Shim_v4_0 extends Shim_v3_1
+private[client] class Shim_v4_0 extends Shim_v3_1 {
+
+  private lazy val alterTableMethod =
+    findMethod(
+      classOf[Hive],
+      "alterTable",
+      classOf[String],
+      classOf[Table],
+      classOf[EnvironmentContext],
+      classOf[Boolean])
+
+  override def alterTable(hive: Hive, tableName: String, table: Table): Unit = {
+    recordHiveCall()
+    alterTableMethod.invoke(hive, tableName, table,
+      environmentContextInAlterTable, false.asInstanceOf[Object])
+  }
+}
