@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  spark-master:
+  master:
     image: 'apache/spark:3.5.0'
     working_dir: /opt/spark
     command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
@@ -26,17 +26,17 @@ services:
     networks:
       - ranger-net
 
-  spark-worker:
+  worker:
     image: 'apache/spark:3.5.0'
     working_dir: /opt/spark
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
-      - spark-master
+      - master
     environment:
       - SPARK_WORKER_CORES=2  # Number of cores to use on each worker
       - SPARK_WORKER_MEMORY=4g  # Amount of memory to use on each worker
       - SPARK_WORKER_WEBUI_PORT=8081
-      - SPARK_LOCAL_IP=spark-worker
+      - SPARK_LOCAL_IP=worker
     volumes:
       - ../..:/opt/spark
       - ./conf/hive-jars:/opt/spark/hive-jars

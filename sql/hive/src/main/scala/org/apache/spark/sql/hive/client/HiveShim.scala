@@ -1687,7 +1687,8 @@ private[client] class Shim_v3_0 extends Shim_v2_3 {
 
   protected lazy val listBucketingLevel: JInteger = 0
 
-  private lazy val clazzLoadFileType = getClass.getClassLoader.loadClass(
+  // In case the package changes, any subclasses should override this.
+  protected lazy val clazzLoadFileType = getClass.getClassLoader.loadClass(
     "org.apache.hadoop.hive.ql.plan.LoadTableDesc$LoadFileType")
 
   private lazy val loadPartitionMethod =
@@ -1804,6 +1805,11 @@ private[client] class Shim_v3_0 extends Shim_v2_3 {
 private[client] class Shim_v3_1 extends Shim_v3_0
 
 private[client] class Shim_v4_0 extends Shim_v3_1 {
+  protected lazy val resetStatistics = JBoolean.FALSE
+
+  // This hasn't been well documented in Hive. It's set as field in LoadTableDesc.
+  // Set it as false for now.
+  protected lazy val isDirectInsert = JBoolean.FALSE
 
   private lazy val alterTableMethod =
     findMethod(
@@ -1813,10 +1819,43 @@ private[client] class Shim_v4_0 extends Shim_v3_1 {
       classOf[Table],
       classOf[EnvironmentContext],
       classOf[Boolean])
+  private lazy val loadTableMethod =
+    findMethod(
+      classOf[Hive],
+      "loadTable",
+      classOf[Path],
+      classOf[String],
+      clazzLoadFileType,
+      JBoolean.TYPE,
+      JBoolean.TYPE,
+      JBoolean.TYPE,
+      JBoolean.TYPE,
+      classOf[JLong],
+      JInteger.TYPE,
+      JBoolean.TYPE,
+      JBoolean.TYPE)
 
   override def alterTable(hive: Hive, tableName: String, table: Table): Unit = {
     recordHiveCall()
     alterTableMethod.invoke(hive, tableName, table,
       environmentContextInAlterTable, false.asInstanceOf[Object])
+  }
+
+  override def loadTable(hive: Hive,
+                         loadPath: Path,
+                         tableName: String,
+                         replace: Boolean,
+                         isSrcLocal: Boolean): Unit = {
+    val loadFileType = if (replace) {
+      clazzLoadFileType.getEnumConstants.find(_.toString.equalsIgnoreCase("REPLACE_ALL"))
+    } else {
+      clazzLoadFileType.getEnumConstants.find(_.toString.equalsIgnoreCase("KEEP_EXISTING"))
+    }
+    assert(loadFileType.isDefined)
+    recordHiveCall()
+    loadTableMethod.invoke(hive, loadPath, tableName, loadFileType.get, isSrcLocal: JBoolean,
+      isSkewedStoreAsSubdir, isAcidIUDoperation, resetStatistics,
+      writeIdInLoadTableOrPartition, stmtIdInLoadTableOrPartition: JInteger,
+      replace: JBoolean, isDirectInsert: JBoolean)
   }
 }
