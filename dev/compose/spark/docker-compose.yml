@@ -15,7 +15,6 @@ services:
       - ../..:/opt/spark
       - ./conf/hive-jars:/opt/spark/hive-jars
       - ./conf/spark-events:/opt/spark/spark-events
-      - ./conf/work:/opt/spark/work
       - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
       - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml
       - ./conf/ranger-hive-audit.xml:/opt/spark/conf/ranger-hive-audit.xml
@@ -41,7 +40,6 @@ services:
       - ../..:/opt/spark
       - ./conf/hive-jars:/opt/spark/hive-jars
       - ./conf/spark-events:/opt/spark/spark-events
-      - ./conf/work:/opt/spark/work
       - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
       - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml
       - ./conf/ranger-hive-audit.xml:/opt/spark/conf/ranger-hive-audit.xml

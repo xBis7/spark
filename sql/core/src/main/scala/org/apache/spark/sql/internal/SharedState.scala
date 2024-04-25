@@ -140,7 +140,6 @@ private[sql] class SharedState(
   lazy val externalCatalog: ExternalCatalogWithListener = {
     val externalCatalog = SharedState.reflect[ExternalCatalog, SparkConf, Configuration](
       SharedState.externalCatalogClassName(conf), conf, hadoopConf)
-    logWarning(s"xbis: local sources")
     // Create default database if it doesn't exist
     // If database name not equals 'default', throw exception
     if (!externalCatalog.databaseExists(SQLConf.get.defaultDatabase)) {

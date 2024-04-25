@@ -768,6 +768,7 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
       table: String,
       parts: Seq[CatalogTablePartition],
       ignoreIfExists: Boolean): Unit = {
+    logWarning(s"xbis: local sources")
     // Convert parts to java.util.List and then
     // pass it as a parameter to AlterTableAddPartitionDesc.
 //    val partitionDescList: java.util.List[AlterTableAddPartitionDesc.PartitionDesc] =
