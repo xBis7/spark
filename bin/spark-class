@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 if [ -z "${SPARK_HOME}" ]; then
   source "$(dirname "$0")"/find-spark-home
 fi
@@ -33,8 +34,6 @@ else
     exit 1
   fi
 fi
-
-#export SPARK_SUBMIT_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=6006"
 
 # Find Spark jars.
 if [ -d "${SPARK_HOME}/jars" ]; then
@@ -115,9 +114,9 @@ CMD=("${CMD[@]:0:$LAST}")
 # Second arg is the java classpath parameter -> -cp
 # Add the debug args between them
 
-#if echo "${CMD[$LAST-1]}" | grep 'spark-shell'; then
-#  debug_args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:6006"
-#  CMD=( "${CMD[@]:0:1}" "$debug_args" "${CMD[@]:1}" )
-#fi
+if echo "${CMD[$LAST-1]}" | grep 'spark-shell'; then
+  debug_args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:6006"
+  CMD=( "${CMD[@]:0:1}" "$debug_args" "${CMD[@]:1}" )
+fi
 
 exec "${CMD[@]}"

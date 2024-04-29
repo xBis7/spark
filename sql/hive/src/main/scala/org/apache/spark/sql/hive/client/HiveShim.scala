@@ -32,7 +32,6 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.TableType
 import org.apache.hadoop.hive.metastore.api.{Database, EnvironmentContext, Function => HiveFunction, FunctionType, MetaException, PrincipalType, ResourceType, ResourceUri}
 import org.apache.hadoop.hive.ql.Driver
-// import org.apache.hadoop.hive.ql.ddl.table.partition.add.AlterTableAddPartitionDesc
 import org.apache.hadoop.hive.ql.io.AcidUtils
 import org.apache.hadoop.hive.ql.metadata.{Hive, HiveException, Partition, Table}
 import org.apache.hadoop.hive.ql.optimizer.lineage.LineageCtx.Index
@@ -768,41 +767,26 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
       table: String,
       parts: Seq[CatalogTablePartition],
       ignoreIfExists: Boolean): Unit = {
-    logWarning(s"xbis: local sources")
-    // Convert parts to java.util.List and then
-    // pass it as a parameter to AlterTableAddPartitionDesc.
-//    val partitionDescList: java.util.List[AlterTableAddPartitionDesc.PartitionDesc] =
-//      new JArrayList[AlterTableAddPartitionDesc.PartitionDesc]()
-//    parts.foreach { part =>
-//      val partDesc: AlterTableAddPartitionDesc.PartitionDesc =
-//        new AlterTableAddPartitionDesc.PartitionDesc(
-//          part.spec.asJava,
-//          part.storage.locationUri.map(CatalogUtils.URIToString(_)).orNull,
-//          part.parameters.asJava)
-//      partitionDescList.add(partDesc)
-//    }
-//
-//    val addPartitionDesc = new AlterTableAddPartitionDesc(
-//      db, table, ignoreIfExists, partitionDescList)
-
-    // We don't need the above part of the code.
-    // After testing and verifying, we can remove it.
-
+    // Hive call to get the table.
     recordHiveCall()
+    val tb: Table = hive.getTable(table)
 
     // We need a java.util.List of
     //    org.apache.hadoop.hive.metastore.api.Partition
-    // We can get a java.util.List of
-    //    org.apache.hadoop.hive.ql.metadata.Partition
-    // and convert it.
-    val partitionList: java.util.List[org.apache.hadoop.hive.metastore.api.Partition] =
+    val apiPartitionList: java.util.List[org.apache.hadoop.hive.metastore.api.Partition] =
       new JArrayList[org.apache.hadoop.hive.metastore.api.Partition]()
 
-    val tb: Table = getTable(hive, db, table, throwException = false)
-    hive.getAllPartitions(tb).forEach(p => {
-      partitionList.add(p.getTPartition)
-    })
-    hive.addPartitions(partitionList, ignoreIfExists, false)
+    // For each element in parts, create an api.Partition obj and add it to the List.
+    // The api.Partition List will be used to add the partitions.
+    parts.foreach { part =>
+      val apiPartition: org.apache.hadoop.hive.metastore.api.Partition =
+        Partition.createMetaPartitionObject(tb, part.spec.asJava, new Path(part.location.toString))
+      apiPartitionList.add(apiPartition)
+    }
+
+    // Hive call to add the partitions.
+    recordHiveCall()
+    hive.addPartitions(apiPartitionList, ignoreIfExists, false)
   }
 
   override def getAllPartitions(hive: Hive, table: Table): Seq[Partition] = {
